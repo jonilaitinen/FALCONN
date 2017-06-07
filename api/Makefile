@@ -6,8 +6,9 @@ CXXFLAGS=-std=gnu++11 -DNDEBUG -Wall -Wextra -march=native -O3 \
 LDFLAGS = -shared  # linking flags
 RM = rm -f  # rm command
 TARGET_LIB = libfalconn.so # target lib
+TARGET_TEST = test
 
-SRCS = FalconnSearchC.cpp
+SRCS = FalconnSearchC.cpp FalconnSearch.cpp main.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 .PHONY: all
@@ -15,6 +16,9 @@ all: ${TARGET_LIB}
 
 $(TARGET_LIB): $(OBJS)
 	$(CXX) ${LDFLAGS} -o $@ $^
+
+$(TARGET_TEST): $(OBJS)
+	$(CXX) -o $@ $^
 
 $(SRCS:.cpp=.d):%.d:%.cpp
 	$(CXX) $(CXXFLAGS) -MM $< >$@
