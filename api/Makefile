@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS=-std=gnu++11 -DNDEBUG -Wall -Wextra -march=native -O3 \
+CXXFLAGS=-std=gnu++11 -DNDEBUG -Wall -Wextra -march=native -O3 -fPIC \
 -I ../external/eigen \
 -I ../src/include
 

@@ -8,7 +8,7 @@
 #include "FalconnSearch.h"
 
 #include <iostream>
-#include <thread>
+#include <map>
 
 const int NUM_QUERIES = 100;
 const int SEED = 4057218;
@@ -24,6 +24,7 @@ FalconnSearch::FalconnSearch() {
  * Chooses a random subset of the dataset to be the queries. The queries are
  * taken out of the dataset.
  */
+/*
 void FalconnSearch::gen_queries(std::vector<Point> *dataset, std::vector<Point> *queries) {
     std::mt19937_64 gen(SEED);
     queries->clear();
@@ -35,6 +36,34 @@ void FalconnSearch::gen_queries(std::vector<Point> *dataset, std::vector<Point> 
         dataset->pop_back();
     }
 }
+*/
+
+/*
+ * Generate queries by randomly choosing points in the dataset and taking an average of
+ * 8 points.
+ */
+void FalconnSearch::gen_queries(std::vector<Point> *dataset, std::vector<Point> *queries) {
+    std::mt19937_64 gen(SEED);
+    queries->clear();
+    for (int i = 0; i < NUM_QUERIES; ++i) {
+        std::uniform_int_distribution<> u(0, dataset->size() - 8);
+        int ind = u(gen);
+        Point query1 = (*dataset)[ind];
+        Point query2 = (*dataset)[ind + 1];
+        Point query3 = (*dataset)[ind + 2];
+        Point query4 = (*dataset)[ind + 3];
+        Point query5 = (*dataset)[ind + 4];
+        Point query6 = (*dataset)[ind + 5];
+        Point query7 = (*dataset)[ind + 6];
+        Point query8 = (*dataset)[ind + 7];
+        
+        Point query = query1 + query2 + query3 + query4 + query5 + query6 + query7 + query8;
+        query /= 8;
+        
+        queries->push_back(query);
+    }
+}
+
 
 /*
  * Generates answers for the queries using the (optimized) linear scan.
@@ -121,11 +150,9 @@ void FalconnSearch::normalize(std::vector<Point> *dataset) {
     }
 }
 
-int FalconnSearch::buildIndexFromData(std::vector<Point> dataset) {
+int FalconnSearch::buildIndexFromData(const std::vector<Point>& inDataset) {
     
-    std::thread::id this_id = std::this_thread::get_id();
-    std::cout << "Build thread id: " << this_id << std::endl;
-    
+    dataset = inDataset;
     std::vector<Point> queries;
     std::vector<int> answers;
     
@@ -135,7 +162,7 @@ int FalconnSearch::buildIndexFromData(std::vector<Point> dataset) {
     std::cout << "done" << std::endl;
     
     // find the center of mass
-    Point center = dataset[0];
+    center = dataset[0];
     for (size_t i = 1; i < dataset.size(); ++i) {
         center += dataset[i];
     }
@@ -199,26 +226,103 @@ int FalconnSearch::buildIndexFromData(std::vector<Point> dataset) {
     std::cout << "done" << std::endl;
     std::cout << num_probes << " probes" << std::endl;
     
-    std::cout << "Start search.. table: " << table.get() << std::endl;
-    std::vector<int> knearest;
-    Point testQuery = dataset[123];
-    testQuery.normalize();
-    table->find_k_nearest_neighbors(testQuery, 30, &knearest);
-    std::cout << "Search complete, result size: " << knearest.size() << std::endl;
-    
     return 1;
 }
 
 std::vector<int> FalconnSearch::search(Point query) {
     
-    std::thread::id this_id = std::this_thread::get_id();
-    std::cout << "Search thread id: " << this_id << std::endl;
+    std::cout << "raw input: " << std::endl;
+    for(int i = 0; i < 10; i++) {
+        std::cout << query[i] << ", ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
     
     query.normalize();
+    
+    std::cout << "normalized input: " << std::endl;
+    for(int i = 0; i < 10; i++) {
+        std::cout << query[i] << ", ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+    
+    query -= center;
+    
+    std::cout << "centered input: " << std::endl;
+    for(int i = 0; i < 10; i++) {
+        std::cout << query[i] << ", ";
+    }
+    std::cout << std::endl;
+    std::cout << "center: " << std::endl;
+    for(int i = 0; i < 10; i++) {
+        std::cout << center[i] << ", ";
+    }
+    std::cout << std::endl;
+    
     std::vector<int> knearest;
     table->find_k_nearest_neighbors(query, 30, &knearest);
     
     std::cout << "Search complete, result size: " << knearest.size() << std::endl;
     
+    std::map<float, int> distanceMap;
+    for(int i = 0; i < dataset.size(); i++) {
+        float dist = l2_distance(query, dataset[i]);
+        distanceMap.insert(std::pair<float, int>(dist, i));
+    }
+    
+    std::cout << "Nearest results: " << std::endl;
+    auto it = distanceMap.begin();
+    for(int i = 0; i < knearest.size(); i++) {
+        float diff = l2_distance(query, dataset[knearest[i]]);
+        std::cout << knearest[i]
+        << ", \tdiff: " << diff
+        << ", \ttrue nearest: " << it->second
+        << ", dist: " << it->first << std::endl;
+        it++;
+    }
+
+    
     return knearest;
 }
+
+float FalconnSearch::l2_distance(Point p1, Point p2) {
+    float sum = 0;
+    for(int i = 0; i < p1.size(); i++) {
+        sum += pow(p1[i] - p2[i], 2);
+    }
+    return sqrt(sum);
+}
+
+/*
+void testAccuracy() {
+    
+    std::cout << "Start search.. " << std::endl;
+    std::vector<int> knearest;
+    Point testQuery = dataset[1];
+    table->find_k_nearest_neighbors(testQuery, 30, &knearest);
+    std::cout << "Search complete, result size: " << knearest.size() << std::endl;
+    
+    std::cout << "Test query dist: " << l2_distance(testQuery, testQuery) << std::endl;
+    std::cout << "Datapoint dist: " << l2_distance(dataset[1], dataset[1]) << std::endl;
+    std::cout << "Test to Datapoint dist: " << l2_distance(testQuery, dataset[1]) << std::endl;
+    
+    std::map<float, int> distanceMap;
+    for(int i = 0; i < dataset.size(); i++) {
+        float dist = l2_distance(testQuery, dataset[i]);
+        distanceMap.insert(std::pair<float, int>(dist, i));
+    }
+    
+    std::cout << "Nearest results: " << std::endl;
+    auto it = distanceMap.begin();
+    for(int i = 0; i < knearest.size(); i++) {
+        float diff = l2_distance(testQuery, dataset[knearest[i]]);
+        std::cout << knearest[i]
+        << ", \tdiff: " << diff
+        << ", \ttrue nearest: " << it->second
+        << ", dist: " << it->first << std::endl;
+        it++;
+    }
+}
+*/
+

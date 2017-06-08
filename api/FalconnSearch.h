@@ -11,7 +11,7 @@ public:
     FalconnSearch();
     virtual ~FalconnSearch() {}
     
-    int buildIndexFromData(std::vector<Point> dataset);
+    int buildIndexFromData(const std::vector<Point>& dataset);
     std::vector<int> search(Point query);
     
 private:
@@ -25,7 +25,10 @@ private:
                         const std::vector<Point> &queries, const std::vector<int> &answers,
                         int start_num_probes);
     void normalize(std::vector<Point> *dataset);
+    float l2_distance(Point p1, Point p2);
     
     std::unique_ptr<falconn::LSHNearestNeighborTable<Point, int32_t> > table;
+    std::vector<Point> dataset;
+    Point center;
     
 };
